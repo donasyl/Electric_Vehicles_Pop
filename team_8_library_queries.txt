@@ -1,0 +1,93 @@
+/*Query One: Create a view that ranks the most popular EV models currently registered in Olympia, Thurston County, WA?  */
+
+DROP VIEW IF EXISTS popular_ev_models_olympia;
+
+CREATE OR REPLACE VIEW popular_ev_models_olympia AS
+SELECT 
+    m.make_name,
+    mo.model_name,
+    COUNT(v.vehicle_id) AS total_registrations
+FROM Vehicles v
+JOIN Location l ON v.location_id = l.location_id
+JOIN Models mo ON v.model_id = mo.model_id
+JOIN Make m ON mo.make_id = m.make_id
+WHERE l.city = 'Olympia' AND l.county = 'Thurston'
+GROUP BY m.make_name, mo.model_name
+ORDER BY total_registrations DESC;
+
+SELECT * FROM popular_ev_models_olympia;
+
+/*Query Two: Create a view that shows the vehicles with the top 10 highest electric ranges. */
+
+CREATE OR REPLACE VIEW top_10_electric_ranges AS
+SELECT 
+    m.make_name,
+    mo.model_name,
+    my.model_year,
+    v.electric_range,
+    v.base_msrp
+FROM Vehicles v
+JOIN Models mo ON v.model_id = mo.model_id
+JOIN Make m ON mo.make_id = m.make_id
+JOIN Model_year my ON mo.model_year_id = my.year_id
+ORDER BY v.electric_range DESC
+LIMIT 10;
+
+SELECT * FROM top_10_electric_ranges;
+
+/*Query Three: Create a view that ranks electric vehicle models in Olympia, WA, by number of registrations. */
+CREATE OR REPLACE VIEW ev_registrations_by_zip_olympia AS
+SELECT 
+    l.postal_code,
+    COUNT(*) AS total_registered
+FROM Vehicles v
+JOIN Location l ON v.location_id = l.location_id
+WHERE l.city = 'Olympia' AND l.county = 'Thurston'
+GROUP BY l.postal_code
+ORDER BY total_registered DESC;
+
+SELECT * FROM ev_registrations_by_zip_olympia;
+
+/*Query Four: Create a view that shows the average range of electric vehicles by manufacturer and type. */
+CREATE OR REPLACE VIEW avg_range_by_make_and_type AS
+SELECT
+  mk.make_name                AS manufacturer,
+  et.ev_type                  AS ev_type,
+    ROUND(AVG(v.electric_range), 0) AS avg_electric_range
+FROM Vehicles v
+JOIN Models m      ON v.model_id    = m.model_id
+JOIN Make mk       ON m.make_id     = mk.make_id
+JOIN EV_Type et    ON v.ev_type_id  = et.ev_type_id
+GROUP BY
+  mk.make_name,
+  et.ev_type;
+  SELECT * FROM avg_range_by_make_and_type;
+
+/*Query Five: Create a view showing electric vehicles with a range above the average range of all vehicles. */
+CREATE OR REPLACE VIEW evs_above_avg_range AS
+SELECT
+  v.vehicle_id,
+  mk.make_name       AS manufacturer,
+  m.model_name       AS model,
+  my.model_year      AS year,
+  et.ev_type         AS ev_type,
+  v.electric_range
+FROM Vehicles v
+JOIN Models      m  ON v.model_id       = m.model_id
+JOIN Make        mk ON m.make_id        = mk.make_id
+JOIN Model_year  my ON m.model_year_id  = my.year_id
+JOIN EV_Type     et ON v.ev_type_id     = et.ev_type_id
+WHERE v.electric_range > (
+    SELECT AVG(electric_range)
+    FROM Vehicles
+    WHERE electric_range IS NOT NULL
+);
+    
+    SELECT * 
+FROM evs_above_avg_range
+ORDER BY electric_range DESC;
+
+
+
+
+
